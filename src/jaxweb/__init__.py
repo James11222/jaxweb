@@ -10,7 +10,7 @@ from .hessian import hessian
 from .io import load_density
 from .mesh import initialize, make_mesh
 from .signatures import NEXUS, NEXUSPLUS, maximum_signature, to_pycosmommf_layout
-from .smoothing import smooth
+from .smoothing import density_floor, smooth
 from .tagging import CLUSTER, FILAMENT, VOID, WALL, tag_structures
 
 __version__ = "0.1.0"
@@ -23,6 +23,7 @@ __all__ = [
     "VOID",
     "WALL",
     "__version__",
+    "density_floor",
     "hessian",
     "initialize",
     "irfft3",

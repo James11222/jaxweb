@@ -36,7 +36,7 @@ def test_smoothing_matches(mesh, cube, algorithm):
     kv = pcm.wavevectors3D(cube.shape)
     smooth_ref = pcm.smooth_gauss if algorithm == "NEXUS" else pcm.smooth_loggauss
     want = smooth_ref(cube + np.float32(1e-16), 2.0, kv)
-    got = np.asarray(jaxweb.smooth(cube, 2.0, mesh, algorithm=algorithm))
+    got = np.asarray(jaxweb.smooth(cube, 2.0, mesh, algorithm=algorithm, floor=cube.min()))
     np.testing.assert_allclose(got, want, rtol=2e-5, atol=2e-5)
 
 
@@ -46,7 +46,7 @@ def test_hessian_matches(mesh, cube, algorithm):
     smooth_ref = pcm.smooth_gauss if algorithm == "NEXUS" else pcm.smooth_loggauss
     smoothed = smooth_ref(cube + np.float32(1e-16), 2.0, kv)
     want = np.moveaxis(pcm.fast_hessian_from_smoothed(smoothed, 2.0, kv), -1, 0)
-    got = np.asarray(jaxweb.hessian(cube, 2.0, mesh, algorithm=algorithm))
+    got = np.asarray(jaxweb.hessian(cube, 2.0, mesh, algorithm=algorithm, floor=cube.min()))
     np.testing.assert_allclose(got, want, atol=1e-5 * np.abs(want).max())
 
 
@@ -54,7 +54,7 @@ def test_hessian_matches(mesh, cube, algorithm):
 def test_maximum_signature_matches(mesh, cube, algorithm):
     want = pcm.maximum_signature(RS, cube, algorithm=algorithm)
     got = jaxweb.to_pycosmommf_layout(
-        jaxweb.maximum_signature(cube, RS, algorithm=algorithm, mesh=mesh)
+        jaxweb.maximum_signature(cube, RS, algorithm=algorithm, mesh=mesh, floor=cube.min())
     )
     assert got.dtype == np.float32
     for c in range(3):
@@ -114,3 +114,23 @@ def test_offload_gives_the_same_result(mesh, cube):
     on_device = jaxweb.maximum_signature(cube, RS[:2], mesh=mesh, offload=False)
     offloaded = jaxweb.maximum_signature(cube, RS[:2], mesh=mesh, offload=True)
     np.testing.assert_array_equal(np.asarray(on_device), np.asarray(offloaded))
+
+
+def test_density_floor_is_an_exact_quantile(mesh, cube):
+    rho = cube.copy()
+    rho[::3, ::5, ::2] = 0.0
+    positive = rho[rho > 0]
+    for quantile in (0.01, 0.3):
+        want = np.float32(0.1) * np.quantile(positive, quantile, method="inverted_cdf")
+        assert jaxweb.density_floor(rho, mesh, quantile=quantile) == want
+
+
+def test_empty_voxels_are_clipped_to_the_floor(mesh, cube):
+    rho = cube.copy()
+    rho[::3, ::5, ::2] = 0.0
+    floor = jaxweb.density_floor(rho, mesh)
+    want = pcm.maximum_signature(RS, np.maximum(rho, floor), algorithm="NEXUSPLUS")
+    got = jaxweb.to_pycosmommf_layout(jaxweb.maximum_signature(rho, RS, mesh=mesh))
+    for c in range(3):
+        scale = want[..., c].max()
+        np.testing.assert_allclose(got[..., c], want[..., c], atol=5e-4 * scale)

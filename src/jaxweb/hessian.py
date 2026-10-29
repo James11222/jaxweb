@@ -31,7 +31,7 @@ from jax.sharding import PartitionSpec as P
 
 from .fft import local_ky_index, local_partial_inverse_x, local_rfft3, wavenumbers
 from .mesh import AXIS, REAL_SPEC, check_shape
-from .smoothing import NEXUS, gaussian, local_loggauss_spectrum
+from .smoothing import NEXUS, gaussian, local_loggauss_spectrum, resolve_floor
 
 
 def local_hessian_spectra(spec, R, shape, n_dev, n_chunks, smooth=False):
@@ -113,10 +113,11 @@ def hessian_from_spectra(g, nyquist_plane, x_start, shape):
     )
 
 
-def hessian(density, R, mesh, algorithm=NEXUS, eps=1e-16):
+def hessian(density, R, mesh, algorithm=NEXUS, floor=None):
     """
     The six Hessian components of the field smoothed at scale ``R``, each
-    x-sharded ``(nx, ny, nz)``, stacked as ``(6, nx, ny, nz)``.
+    x-sharded ``(nx, ny, nz)``, stacked as ``(6, nx, ny, nz)``. ``floor`` as
+    in ``smooth``.
 
     For checks on small grids only: it holds all six components at once,
     which ``maximum_signature`` never does.
@@ -125,12 +126,13 @@ def hessian(density, R, mesh, algorithm=NEXUS, eps=1e-16):
     shape = density.shape
     n_dev = mesh.shape[AXIS]
     R = jnp.float32(R)
+    floor = resolve_floor(density, mesh, algorithm, floor)
 
-    def local(rho, R):
-        field = rho + jnp.float32(eps)
+    def local(rho, R, floor):
         if algorithm == NEXUS:
-            spec, smooth = local_rfft3(field), True
+            spec, smooth = local_rfft3(rho), True
         else:
+            field = jnp.maximum(rho, floor)
             total = lax.psum(jnp.sum(field), AXIS)
             spec = local_loggauss_spectrum(local_rfft3(jnp.log10(field)), total, R, shape)
             smooth = False
@@ -139,6 +141,6 @@ def hessian(density, R, mesh, algorithm=NEXUS, eps=1e-16):
         return jnp.stack(hessian_from_spectra(g, plane, x_start, shape))
 
     fn = jax.shard_map(
-        local, mesh=mesh, in_specs=(REAL_SPEC, P()), out_specs=P(None, AXIS, None, None)
+        local, mesh=mesh, in_specs=(REAL_SPEC, P(), P()), out_specs=P(None, AXIS, None, None)
     )
-    return jax.jit(fn)(density, R)
+    return jax.jit(fn)(density, R, floor)

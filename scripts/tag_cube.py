@@ -70,7 +70,7 @@ def main():
     parser.add_argument("--out-dir", default=None, help="default: the cube's directory")
     parser.add_argument("--algorithm", default="NEXUSPLUS", choices=["NEXUS", "NEXUSPLUS"])
     parser.add_argument("--n-scales", type=int, default=9, help="R = 2^(n/2), n < N voxels")
-    parser.add_argument("--overdensity-threshold", type=float, default=370)
+    parser.add_argument("--overdensity-threshold", type=float, default=330)
     args = parser.parse_args()
 
     jaxweb.initialize()
@@ -92,7 +92,8 @@ def main():
     times["load"] = time.perf_counter() - t0
 
     t = time.perf_counter()
-    sigmax = jaxweb.maximum_signature(rho, Rs, algorithm=args.algorithm, mesh=mesh)
+    floor = jaxweb.density_floor(rho, mesh) if args.algorithm == "NEXUSPLUS" else None
+    sigmax = jaxweb.maximum_signature(rho, Rs, algorithm=args.algorithm, mesh=mesh, floor=floor)
     sigmax.block_until_ready()
     times["signatures"] = time.perf_counter() - t
 
@@ -106,6 +107,7 @@ def main():
     )
     structure.block_until_ready()
     times["tagging"] = time.perf_counter() - t
+    times.update({f"tagging: {k}": v for k, v in summary.pop("seconds").items()})
     del sigmax, rho
 
     t = time.perf_counter()
@@ -121,6 +123,7 @@ def main():
             "algorithm": args.algorithm,
             "Rs": Rs,
             "overdensity_threshold": args.overdensity_threshold,
+            "density_floor": floor,
             "devices": len(jax.devices()),
             "structure_filter": str(filter_path.resolve()),
             "seconds": {k: round(v, 1) for k, v in times.items()},

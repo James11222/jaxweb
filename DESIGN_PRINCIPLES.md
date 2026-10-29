@@ -39,7 +39,7 @@ An A100 80 GB has about 74.5 GiB, minus the CUDA context. **These numbers are no
 1. **The XLA allocator settings.** By default JAX preallocates 75% of the GPU (~60 GB) and caps itself there. These must be set before Python starts (see `benchmarks/run_a100_node.slurm`):
    `XLA_PYTHON_CLIENT_PREALLOCATE=false`, `XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`, `XLA_PYTHON_CLIENT_ALLOCATOR=cuda_async`.
 2. **Full-slab FFTs on non-minor axes.** `local_rfft3` / `local_irfft3` FFT a whole 8 GiB slab along axes 1 and 0. XLA GPU only transforms the minor axes, so it inserts transposes (+8 GiB each), and cuFFT may need a workspace the size of the data. These run in `_make_base` (once) and in the NEXUS+ smoothing step (every scale). Fix: chunk them like `local_partial_inverse_x`, for example the z/y transforms a few x-planes at a time and the x transform a few k_y columns at a time.
-3. **`_make_base` was never budgeted.** It holds ρ, ρ+eps, log10, and FFT transients at once. Free ρ before it runs (the caller still holds `rho`), or chunk it.
+3. **`_make_base` was never budgeted.** It holds ρ, clipped ρ, log10, and FFT transients at once. Free ρ before it runs (the caller still holds `rho`), or chunk it.
 4. **2³¹-element slabs.** 512 × 2048 × 2048 = 2³¹ exactly, which can break int32 indexing in XLA, cuFFT or CuPy. Keep every kernel's operand below that size.
 5. **Which stage OOMed** matters: signatures (NEXUS or NEXUS+, smoothing or Hessian step) or tagging (CuPy `label`). The traceback names the jitted function.
 

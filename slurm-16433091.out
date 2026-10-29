@@ -1,0 +1,17 @@
+name, memory.total [MiB]
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+Clusters: signature threshold 7.958666801452637, volume fraction 0.00024482293520122766, mass fraction 0.14076729118824005
+Filaments: signature threshold 0.2238721251487732, volume fraction 0.10590146481990814, mass fraction 0.5574174523353577
+Walls: signature threshold 0.35481345653533936, volume fraction 0.20968732237815857, mass fraction 0.17328618466854095
+Voids: signature threshold None, volume fraction 0.6841663718223572, mass fraction 0.12852905690670013
+NEXUSPLUS (2048, 2048, 2048) on 4 devices
+  load 30.6 s, signatures 47.6 s, tagging 158.2 s, tagging: clusters 155.5 s, tagging: filaments 1.0 s, tagging: walls 1.1 s, tagging: filter 0.3 s, write 31.7 s, total 268.0 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/floor/dm_density_L1_m9_DMO_0077_NEXUSPLUS_structure_filter.npy
+  wrote ../data/floor/dm_density_L1_m9_DMO_0077_NEXUSPLUS_summary.json

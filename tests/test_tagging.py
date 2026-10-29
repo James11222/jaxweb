@@ -13,6 +13,8 @@ pcm = pytest.importorskip("pycosmommf")
 skimage_measure = pytest.importorskip("skimage.measure")
 
 RS = [1.0, 2.0**0.5, 2.0, 2.0**1.5]
+# PyCosmoMMF's cluster-signature grid, which jaxweb's default refines and extends.
+PCM_CLUSTER_THRESHOLDS = jaxweb.tagging.cluster_signature_thresholds(smax=30, n=10)
 
 
 def reference_clump_means(mask, delta):
@@ -70,6 +72,7 @@ def test_tagging_matches_pycosmommf(mesh, tagged_cube, overdensity_threshold, ca
         rho,
         np.moveaxis(sigs, -1, 0),
         overdensity_threshold=overdensity_threshold,
+        cluster_thresholds=PCM_CLUSTER_THRESHOLDS,
         mesh=mesh,
     )
     got = np.asarray(got)
@@ -110,7 +113,11 @@ def test_end_to_end_matches_pycosmommf(mesh, capsys):
     )
     capsys.readouterr()
     got, summary = jaxweb.tag_structures(
-        rho, jaxweb.maximum_signature(rho, RS, mesh=mesh), overdensity_threshold=20, mesh=mesh
+        rho,
+        jaxweb.maximum_signature(rho, RS, mesh=mesh, floor=rho.min()),
+        overdensity_threshold=20,
+        cluster_thresholds=PCM_CLUSTER_THRESHOLDS,
+        mesh=mesh,
     )
     assert summary["S_fil_thresh"] == want_summary["S_fil_thresh"]
     assert summary["S_wall_thresh"] == want_summary["S_wall_thresh"]

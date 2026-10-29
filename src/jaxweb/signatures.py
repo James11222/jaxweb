@@ -25,7 +25,7 @@ from .mesh import (
     real_sharding,
     sig_sharding,
 )
-from .smoothing import ALGORITHMS, NEXUS, NEXUSPLUS, local_loggauss_spectrum
+from .smoothing import ALGORITHMS, NEXUS, NEXUSPLUS, local_loggauss_spectrum, resolve_floor
 
 
 def _chunking(shape, n_dev, chunk_elements):
@@ -119,19 +119,22 @@ def _should_offload(shape, mesh):
     return bool(limit) and 9.2 * _slab_bytes(shape, mesh) > 0.9 * limit
 
 
-def _make_base(mesh, shape, algorithm, eps, chunk_elements=CHUNK_ELEMENTS):
-    """k-space of ρ (NEXUS) or log10 ρ (NEXUS+), and the total mass Σρ."""
+def _make_base(mesh, shape, algorithm, chunk_elements=CHUNK_ELEMENTS):
+    """
+    ``(ρ, floor) -> (spectrum, total)``: k-space of ρ (NEXUS) or of log10 of
+    ρ clipped to at least ``floor`` (NEXUS+), and the total mass of that field.
+    """
 
-    def local(rho):
-        eps32 = jnp.float32(eps)
-        total = lax.psum(jnp.sum(rho + eps32), AXIS)
+    def local(rho, floor):
         if algorithm == NEXUSPLUS:
-            pre = lambda x: jnp.log10(x + eps32)
+            total = lax.psum(jnp.sum(jnp.maximum(rho, floor)), AXIS)
+            pre = lambda x: jnp.log10(jnp.maximum(x, floor))
         else:
-            pre = lambda x: x + eps32
+            total = lax.psum(jnp.sum(rho), AXIS)
+            pre = None
         return local_rfft3(rho, chunk_elements, pre=pre), total
 
-    fn = jax.shard_map(local, mesh=mesh, in_specs=REAL_SPEC, out_specs=(KSPACE_SPEC, P()))
+    fn = jax.shard_map(local, mesh=mesh, in_specs=(REAL_SPEC, P()), out_specs=(KSPACE_SPEC, P()))
     return jax.jit(fn)
 
 
@@ -140,7 +143,7 @@ def maximum_signature(
     Rs,
     algorithm=NEXUSPLUS,
     mesh=None,
-    eps=1e-16,
+    floor=None,
     chunk_elements=CHUNK_ELEMENTS,
     offload=None,
 ):
@@ -155,8 +158,10 @@ def maximum_signature(
         algorithm: ``"NEXUS"`` (Gaussian smoothing of ρ) or ``"NEXUSPLUS"``
             (Gaussian smoothing of log10 ρ, which needs ρ > 0).
         mesh: the device mesh; default ``jaxweb.make_mesh()`` over every device.
-        eps: added to the density before use, and the floor of the result,
-            as in PyCosmoMMF.
+        floor: NEXUS+ only. ρ is clipped to at least ``floor`` before log10.
+            ``None`` (default) uses ``jaxweb.density_floor``: a tenth of the
+            1% quantile of the positive voxels, so empty voxels sit just
+            below the occupied ones instead of many decades below.
         chunk_elements: elements per chunk in the chunked loops; lower it to
             trade speed for memory.
         offload: NEXUS+ only. ``True`` keeps the spectrum of log10 ρ in pinned
@@ -187,11 +192,12 @@ def maximum_signature(
             )
             raise ValueError(msg)
 
-    base, total = _make_base(mesh, shape, algorithm, eps, chunk_elements)(density)
+    floor = resolve_floor(density, mesh, algorithm, floor)
+    base, total = _make_base(mesh, shape, algorithm, chunk_elements)(density, floor)
     del density
 
     sigmax = jax.jit(
-        lambda: jnp.full((3, *shape), eps, dtype=jnp.float32),
+        lambda: jnp.zeros((3, *shape), dtype=jnp.float32),
         out_shardings=sig_sharding(mesh),
     )()
 

@@ -31,6 +31,8 @@ structure, summary = jaxweb.tag_structures(rho, sigmax, overdensity_threshold=37
 # summary: thresholds, dM²/dlog S curves, volume and mass fractions (PyCosmoMMF's keys)
 ```
 
+NEXUS+ takes log10 ρ, so empty voxels need a floor: by default ρ is clipped to at least `jaxweb.density_floor(rho, mesh)`, a tenth of the 1% quantile of the positive voxels (pass `floor=` to override). PyCosmoMMF adds `1e-16` instead, which puts empty voxels 16 decades down and gives spurious walls around every empty region.
+
 The input must come from a periodic box, and `nx` and `ny` must be divisible by the number of GPUs.
 
 On GPUs, set these before starting Python (see `benchmarks/run_a100_node.slurm`):

@@ -63,6 +63,6 @@ def test_loggauss_stage_budget(mesh, specs):
 def test_base_stage_budget(mesh, specs, algorithm):
     shape, _, _, _, slab = specs
     real = jax.ShapeDtypeStruct(shape, jnp.float32, sharding=real_sharding(mesh))
-    base = _make_base(mesh, shape, algorithm, 1e-16, CHUNK)
+    base = _make_base(mesh, shape, algorithm, CHUNK)
     # Density in, spectrum out, one spectrum-sized buffer in between.
-    assert footprint(base.lower(real).compile()) / slab < 3.5
+    assert footprint(base.lower(real, jax.ShapeDtypeStruct((), jnp.float32)).compile()) / slab < 3.5

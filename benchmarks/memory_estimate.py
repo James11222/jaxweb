@@ -61,7 +61,7 @@ def main():
 
     # The density stays on the device throughout (the caller holds it).
     base_stage = _footprint(
-        _make_base(mesh, shape, args.algorithm, 1e-16, chunk).lower(real).compile()
+        _make_base(mesh, shape, args.algorithm, chunk).lower(real, scalar).compile()
     )
     step = _make_signature_step(mesh, shape, chunk, smooth=smooth)
     signature_stage = _footprint(step.lower(sigmax, spec, scalar).compile()) + slab

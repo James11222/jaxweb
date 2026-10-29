@@ -1,7 +1,7 @@
 """Connected clumps of a sharded boolean mask, with per-clump δ sums.
 
 Each device labels its own x-slab (CuPy on GPUs, SciPy on CPU devices, both
-26-connected). Clumps that touch across a slab boundary are then joined: the
+26-connected), all devices at once, one host thread each. Clumps that touch across a slab boundary are then joined: the
 last x-plane of every slab is compared with the first plane of the next one,
 every pair of touching labels becomes an edge, and a connected-components
 pass over those edges on the host maps every local label to its clump.
@@ -13,6 +13,7 @@ Clumps are not joined across the faces of the box, to match PyCosmoMMF
 from __future__ import annotations
 
 import functools
+from concurrent.futures import ThreadPoolExecutor
 
 import jax
 import jax.numpy as jnp
@@ -42,7 +43,7 @@ def _label_shard(mask):
             labels, n = cupyx.scipy.ndimage.label(
                 cp.from_dlpack(mask).astype(bool), structure=_STRUCTURE
             )
-            return jax.dlpack.from_dlpack(labels.astype(cp.int32)), int(n)
+            return jax.dlpack.from_dlpack(labels.astype(cp.int32, copy=False)), int(n)
     labels, n = scipy.ndimage.label(np.asarray(mask), structure=_STRUCTURE)
     return jax.device_put(labels.astype(np.int32), device), int(n)
 
@@ -86,6 +87,34 @@ def _touching_pairs(last_plane, first_plane):
     return np.unique(np.concatenate(pairs), axis=0)
 
 
+def _label_slab(mask, rho):
+    """
+    Label one device's slab, in pieces of at most LABEL_ELEMENTS voxels (a
+    2048³ slab on one of 4 GPUs has exactly 2^31, where int32 indexing can
+    break). Per piece, along x: ``(sums, counts, first plane, last plane, n)``
+    on the host. Pieces are stitched exactly like slabs.
+    """
+    nx, ny, nz = mask.shape
+    planes = largest_divisor_at_most(nx, LABEL_ELEMENTS // (ny * nz))
+    pieces = []
+    for start in range(0, nx, planes):
+        piece = mask if planes == nx else mask[start : start + planes]
+        labels, n = _label_shard(piece)
+        rho_piece = rho if planes == nx else rho[start : start + planes]
+        s, c = _segment_sums(labels, rho_piece, _bucket(n + 1))
+        pieces.append(
+            (
+                np.asarray(s)[1 : n + 1],
+                np.asarray(c)[1 : n + 1],
+                np.asarray(labels[0]),
+                np.asarray(labels[-1]),
+                n,
+            )
+        )
+        del labels, piece, rho_piece
+    return pieces
+
+
 def clump_mean_overdensity(mask, rho, mesh):
     """
     Mean δ of every 26-connected clump of ``mask``, across all slabs.
@@ -106,25 +135,15 @@ def clump_mean_overdensity(mask, rho, mesh):
     rho = as_sharded(rho, real_sharding(mesh), jnp.float32)
     rho_shards = {s.index[0].start or 0: s.data for s in rho.addressable_shards}
 
-    sums, counts, first, last, n_local = [], [], [], [], []
-    for shard in sorted(mask.addressable_shards, key=lambda s: s.index[0].start or 0):
-        rho_shard = rho_shards[shard.index[0].start or 0]
-        nx, ny, nz = shard.data.shape
-        # Label in pieces of at most LABEL_ELEMENTS voxels: a 2048³ slab on one
-        # of 4 GPUs has exactly 2^31, where int32 indexing can break. Pieces
-        # are stitched exactly like slabs.
-        planes = largest_divisor_at_most(nx, LABEL_ELEMENTS // (ny * nz))
-        for start in range(0, nx, planes):
-            piece = shard.data if planes == nx else shard.data[start : start + planes]
-            labels, n = _label_shard(piece)
-            rho_piece = rho_shard if planes == nx else rho_shard[start : start + planes]
-            s, c = _segment_sums(labels, rho_piece, _bucket(n + 1))
-            sums.append(np.asarray(s)[1 : n + 1])
-            counts.append(np.asarray(c)[1 : n + 1])
-            first.append(np.asarray(labels[0]))
-            last.append(np.asarray(labels[-1]))
-            n_local.append(n)
-            del labels, piece, rho_piece
+    shards = sorted(mask.addressable_shards, key=lambda s: s.index[0].start or 0)
+    # One thread per device, so the devices label at the same time: each
+    # thread mostly waits on its device, with the GIL released.
+    with ThreadPoolExecutor(max_workers=len(shards)) as pool:
+        slabs = list(
+            pool.map(lambda s: _label_slab(s.data, rho_shards[s.index[0].start or 0]), shards)
+        )
+    pieces = [piece for slab in slabs for piece in slab]
+    sums, counts, first, last, n_local = map(list, zip(*pieces, strict=True))
 
     offsets = np.concatenate([[0], np.cumsum(n_local)])
     n_total = int(offsets[-1])

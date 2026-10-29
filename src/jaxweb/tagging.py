@@ -13,6 +13,8 @@ arrays: the same thresholds, the same selection rules and the same uint8
 
 from __future__ import annotations
 
+import time
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -39,9 +41,13 @@ CLUSTER, FILAMENT, WALL, VOID = 1, 2, 3, 4
 # -- Helpers shared with PyCosmoMMF (same rules, same float32 values) --------
 
 
-def cluster_signature_thresholds():
-    """The float32 cluster-signature thresholds scanned for clusters."""
-    return np.geomspace(0.1, 30, 10, dtype=np.float32)
+def cluster_signature_thresholds(smax=60.0, n=20):
+    """
+    The float32 cluster-signature thresholds scanned for clusters: ``n``
+    log-spaced values from 0.1 to ``smax``. PyCosmoMMF uses ``smax=30, n=10``;
+    the default is twice as fine and reaches twice as high.
+    """
+    return np.geomspace(0.1, smax, n, dtype=np.float32)
 
 
 def virialized_fraction(n_virialized, n_clumps):
@@ -176,8 +182,7 @@ def _mass_threshold(sigmax, component, rho, valid, Smin, Smax, mesh):
     return S[np.argmax(dM2)], S, dM2
 
 
-def _cluster_bool(rho, sigmax, overdensity_threshold, mesh):
-    thresholds = cluster_signature_thresholds()
+def _cluster_bool(rho, sigmax, overdensity_threshold, thresholds, mesh):
     fractions = np.zeros_like(thresholds)
     for i, S_th in enumerate(thresholds):
         means = clump_mean_overdensity(_cluster_mask(sigmax, S_th), rho, mesh)
@@ -200,6 +205,7 @@ def tag_structures(
     Smin=-3,
     Smax=2,
     clusbool=None,
+    cluster_thresholds=None,
     mesh=None,
     verbose=False,
 ):
@@ -214,6 +220,8 @@ def tag_structures(
         Smin, Smax: range of the log10 𝒮 grid for the filament and wall
             mass curves.
         clusbool: an optional boolean cluster mask to use instead of step 1.
+        cluster_thresholds: the cluster-signature thresholds scanned in
+            step 1; default ``cluster_signature_thresholds()``.
         mesh: the device mesh; default ``jaxweb.make_mesh()``.
         verbose: print PyCosmoMMF's report.
 
@@ -221,7 +229,8 @@ def tag_structures(
         ``(structure_filter, summary)``: an x-sharded uint8 array
         (1 cluster, 2 filament, 3 wall, 4 void) and a dict with the
         thresholds, curves and volume / mass fractions, using the keys of
-        PyCosmoMMF's ``summary_data``.
+        PyCosmoMMF's ``summary_data``, plus ``"seconds"``: the wall-clock
+        time of each stage (clusters, filaments, walls, filter).
     """
     mesh = make_mesh() if mesh is None else mesh
     check_shape(density.shape, mesh)
@@ -236,23 +245,35 @@ def tag_structures(
         )
         raise ValueError(msg)
 
+    seconds = {}
+    t = time.perf_counter()
     if clusbool is None:
+        if cluster_thresholds is None:
+            cluster_thresholds = cluster_signature_thresholds()
         clusbool, cluster_thresh, S_clus, f_vir_clus = _cluster_bool(
-            rho, sigmax, overdensity_threshold, mesh
+            rho, sigmax, overdensity_threshold, np.float32(cluster_thresholds), mesh
         )
     else:
         clusbool = as_sharded(clusbool, real_sharding(mesh), jnp.bool_)
         cluster_thresh = S_clus = f_vir_clus = None
+    clusbool.block_until_ready()
+    seconds["clusters"] = time.perf_counter() - t
 
+    t = time.perf_counter()
     filament_thresh, S_fil, dM2_fil = _mass_threshold(
         sigmax, 1, rho, _filament_valid(clusbool), Smin, Smax, mesh
     )
+    seconds["filaments"] = time.perf_counter() - t
+    t = time.perf_counter()
     wall_thresh, S_wall, dM2_wall = _mass_threshold(
         sigmax, 2, rho, _wall_valid(clusbool, sigmax, filament_thresh), Smin, Smax, mesh
     )
-    structure = _structure_filter(clusbool, sigmax, filament_thresh, wall_thresh)
+    seconds["walls"] = time.perf_counter() - t
 
+    t = time.perf_counter()
+    structure = _structure_filter(clusbool, sigmax, filament_thresh, wall_thresh)
     volume, mass = (np.asarray(a) for a in _make_fractions(mesh)(structure, rho))
+    seconds["filter"] = time.perf_counter() - t
     volume = volume.sum(axis=0, dtype=np.int64)
     total_mass = np.float32(mass.sum())
     summary = {
@@ -267,6 +288,7 @@ def tag_structures(
         "S_wall_thresh": wall_thresh,
         "volume_fractions": [np.float32(v) / n_cells for v in volume],
         "mass_fractions": [np.float32(m) / total_mass for m in mass],
+        "seconds": seconds,
     }
     if verbose:
         _report(summary)
