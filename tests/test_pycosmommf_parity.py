@@ -85,11 +85,9 @@ def test_synthetic_shapes_match(mesh, make):
     got = jaxweb.to_pycosmommf_layout(
         jaxweb.maximum_signature(rho, RS, algorithm="NEXUS", mesh=mesh)
     )
-    # Highly symmetric shapes have exactly degenerate Hessians (on a cylinder's
-    # axis, say), where float32 rounding in the trig eigen-solver moves a
-    # near-zero signature by up to ~2e-4 of the maximum, depending on the
-    # platform's FFT and libm. PyCosmoMMF's own CPU and GPU backends differ the same way.
-    np.testing.assert_allclose(got, want, rtol=1e-3, atol=1e-3 * want.max())
+    # Highly symmetric shapes have near-degenerate Hessians, where float32
+    # rounding in the trig eigen-solver moves the signature by ~1e-3 relative.
+    np.testing.assert_allclose(got, want, rtol=1e-3, atol=1e-4 * want.max())
     # The dominant structure type agrees voxel by voxel wherever it is clear.
     strong = want.max(axis=-1) > 0.05 * want.max()
     assert np.mean(got.argmax(-1)[strong] == want.argmax(-1)[strong]) > 0.999
