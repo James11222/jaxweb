@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jaxweb"
+version = "0.1.0"
+description = "NEXUS and NEXUS+ cosmic web classification on many GPUs with JAX"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "James Sunseri" }]
+requires-python = ">=3.11"
+dependencies = ["jax>=0.7", "numpy"]
+
+[project.optional-dependencies]
+gpu = ["jax[cuda12]>=0.7", "cupy-cuda12x"]
+hdf5 = ["h5py"]
+test = ["pytest", "scipy", "pycosmommf"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jaxweb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+isort.required-imports = ["from __future__ import annotations"]
