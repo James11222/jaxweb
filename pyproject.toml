@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jaxweb"
+version = "0.1.0"
+description = "NEXUS and NEXUS+ cosmic web classification on many GPUs with JAX"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "James Sunseri" }]
+requires-python = ">=3.11"
+dependencies = ["jax>=0.7", "numpy", "scipy"]
+
+[project.optional-dependencies]
+gpu = ["jax[cuda12]>=0.7", "cupy-cuda12x"]
+hdf5 = ["h5py"]
+# The parity tests need PyCosmoMMF's float32 rewrite, which is newer than the
+# PyPI release (0.0.8), so pin a commit of its main branch.
+test = [
+    "pytest",
+    "scikit-image",
+    "pycosmommf @ git+https://github.com/James11222/PyCosmoMMF@f58050dec8ff398fdff886d33ed6252976136ca0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jaxweb"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+isort.required-imports = ["from __future__ import annotations"]
