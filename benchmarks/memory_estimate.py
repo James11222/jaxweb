@@ -19,8 +19,8 @@ import jax
 import jax.numpy as jnp
 
 import jaxweb
-from jaxweb.mesh import kspace_sharding, sig_sharding
-from jaxweb.signatures import CHUNK_ELEMENTS, _make_loggauss_step, _make_signature_step
+from jaxweb.mesh import CHUNK_ELEMENTS, kspace_sharding, sig_sharding
+from jaxweb.signatures import _make_loggauss_step, _make_signature_step
 
 GiB = 2**30
 

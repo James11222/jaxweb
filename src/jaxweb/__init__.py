@@ -11,12 +11,17 @@ from .io import load_density
 from .mesh import initialize, make_mesh
 from .signatures import NEXUS, NEXUSPLUS, maximum_signature, to_pycosmommf_layout
 from .smoothing import smooth
+from .tagging import CLUSTER, FILAMENT, VOID, WALL, tag_structures
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "CLUSTER",
+    "FILAMENT",
     "NEXUS",
     "NEXUSPLUS",
+    "VOID",
+    "WALL",
     "__version__",
     "hessian",
     "initialize",
@@ -26,5 +31,6 @@ __all__ = [
     "maximum_signature",
     "rfft3",
     "smooth",
+    "tag_structures",
     "to_pycosmommf_layout",
 ]

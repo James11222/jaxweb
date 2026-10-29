@@ -13,19 +13,17 @@ from .fft import largest_divisor_at_most, local_rfft3
 from .hessian import hessian_from_spectra, local_hessian_spectra
 from .mesh import (
     AXIS,
+    CHUNK_ELEMENTS,
     KSPACE_SPEC,
     REAL_SPEC,
     SIG_SPEC,
+    as_sharded,
     check_shape,
     kspace_sharding,
     real_sharding,
     sig_sharding,
 )
 from .smoothing import ALGORITHMS, NEXUS, NEXUSPLUS, local_loggauss_spectrum
-
-# Elements per chunk in the chunked loops (2^25 float32 = 128 MiB). Each loop
-# body holds a few tens of chunk-sized temporaries, so ~2-4 GiB per device.
-CHUNK_ELEMENTS = 2**25
 
 
 def _chunking(shape, n_dev, chunk_elements):
@@ -114,14 +112,6 @@ def _make_base(mesh, shape, algorithm, eps):
     return jax.jit(fn)
 
 
-def _as_sharded_density(density, mesh):
-    if isinstance(density, jax.Array) and density.sharding.is_equivalent_to(
-        real_sharding(mesh), density.ndim
-    ):
-        return density.astype(jnp.float32)
-    return jax.device_put(np.asarray(density, dtype=np.float32), real_sharding(mesh))
-
-
 def maximum_signature(
     density,
     Rs,
@@ -164,7 +154,7 @@ def maximum_signature(
     check_shape(density.shape, mesh)
     shape = tuple(density.shape)
 
-    density = _as_sharded_density(density, mesh)
+    density = as_sharded(density, real_sharding(mesh), jnp.float32)
     if algorithm == NEXUSPLUS:
         n_negative = int(jnp.sum(density < 0))
         if n_negative:

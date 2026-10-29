@@ -10,12 +10,12 @@ readme = "README.md"
 license = "MIT"
 authors = [{ name = "James Sunseri" }]
 requires-python = ">=3.11"
-dependencies = ["jax>=0.7", "numpy"]
+dependencies = ["jax>=0.7", "numpy", "scipy"]
 
 [project.optional-dependencies]
 gpu = ["jax[cuda12]>=0.7", "cupy-cuda12x"]
 hdf5 = ["h5py"]
-test = ["pytest", "scipy", "pycosmommf"]
+test = ["pytest", "pycosmommf", "scikit-image"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/jaxweb"]

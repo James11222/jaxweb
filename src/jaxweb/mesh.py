@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 
 import jax
+import numpy as np
 from jax.sharding import NamedSharding
 from jax.sharding import PartitionSpec as P
 
@@ -23,6 +24,10 @@ AXIS = "x"
 REAL_SPEC = P(AXIS, None, None)
 KSPACE_SPEC = P(None, AXIS, None)
 SIG_SPEC = P(None, AXIS, None, None)
+
+# Elements per chunk in the chunked loops (2^25 float32 = 128 MiB). A loop
+# body holds a few tens of chunk-sized temporaries, so ~2-4 GiB per device.
+CHUNK_ELEMENTS = 2**25
 
 _MULTI_PROCESS_ENV = ("SLURM_NTASKS", "OMPI_COMM_WORLD_SIZE", "PMI_SIZE")
 
@@ -80,3 +85,13 @@ def check_shape(shape, mesh):
     if nz % 2:
         msg = f"nz = {nz} must be even for the real-to-complex FFT"
         raise ValueError(msg)
+
+
+def as_sharded(x, sharding, dtype):
+    """
+    ``x`` as a JAX array of ``dtype`` with ``sharding``. NumPy input is split
+    on the host and sent slab by slab, never staged whole on one device.
+    """
+    if isinstance(x, jax.Array):
+        return jax.device_put(x.astype(dtype), sharding)
+    return jax.device_put(np.asarray(x, dtype=dtype), sharding)
