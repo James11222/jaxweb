@@ -7,8 +7,12 @@ a laptop for any grid size. Use simulated devices to model a GPU node:
     XLA_FLAGS=--xla_force_host_platform_device_count=4 JAX_PLATFORMS=cpu \\
         python benchmarks/memory_estimate.py 2048
 
-The numbers come from the CPU compiler, so treat them as an estimate of the
-GPU peak: cuFFT work areas and NCCL buffers are not included.
+The peaks include the density, which callers usually keep on the device for
+tagging. At 2048³ on 4 devices the CPU compiler gives the same buffer
+assignment as XLA GPU, and the peaks match the ones measured on 4× A100 80 GB
+(65.3 GiB, or 73.3 GiB for NEXUS+ without offload). Run it on the GPUs
+themselves to be sure after changing ``fft.py``, ``hessian.py`` or
+``signatures.py``: XLA GPU adds transposes the CPU compiler does not.
 """
 
 from __future__ import annotations
@@ -19,8 +23,8 @@ import jax
 import jax.numpy as jnp
 
 import jaxweb
-from jaxweb.mesh import CHUNK_ELEMENTS, kspace_sharding, sig_sharding
-from jaxweb.signatures import _make_loggauss_step, _make_signature_step
+from jaxweb.mesh import CHUNK_ELEMENTS, kspace_sharding, real_sharding, sig_sharding
+from jaxweb.signatures import _make_base, _make_loggauss_step, _make_signature_step
 
 GiB = 2**30
 
@@ -45,31 +49,42 @@ def main():
 
     mesh = jaxweb.make_mesh()
     n, n_dev = args.n, len(jax.devices())
+    chunk = args.chunk_elements
     shape = (n, n, n)
     slab = 4 * n**3 / n_dev
+    real = jax.ShapeDtypeStruct(shape, jnp.float32, sharding=real_sharding(mesh))
     sigmax = jax.ShapeDtypeStruct((3, *shape), jnp.float32, sharding=sig_sharding(mesh))
     spec = jax.ShapeDtypeStruct((n, n, n // 2 + 1), jnp.complex64, sharding=kspace_sharding(mesh))
     scalar = jax.ShapeDtypeStruct((), jnp.float32)
+    spectrum = 8 * n * n * (n // 2 + 1) / n_dev
     smooth = args.algorithm == "NEXUS"
 
-    step = _make_signature_step(mesh, shape, args.chunk_elements, smooth=smooth)
-    signature_stage = _footprint(step.lower(sigmax, spec, scalar).compile())
+    # The density stays on the device throughout (the caller holds it).
+    base_stage = _footprint(
+        _make_base(mesh, shape, args.algorithm, 1e-16, chunk).lower(real).compile()
+    )
+    step = _make_signature_step(mesh, shape, chunk, smooth=smooth)
+    signature_stage = _footprint(step.lower(sigmax, spec, scalar).compile()) + slab
 
     print(f"{args.algorithm} {n}^3 on {n_dev} devices, per device (1 slab = {slab / GiB:.2f} GiB):")
     if smooth:
-        print(f"  peak: {signature_stage / slab:.1f} slabs = {signature_stage / GiB:.2f} GiB")
+        peak = max(base_stage, signature_stage)
+        print(
+            f"  base {base_stage / slab:.1f}, signatures {signature_stage / slab:.1f} slabs"
+            f" -> peak {peak / GiB:.2f} GiB"
+        )
         return
 
-    smooth_step = _make_loggauss_step(mesh, shape)
-    # The running max (3 slabs) stays on the device while the smoothing runs.
-    smoothing_stage = _footprint(smooth_step.lower(spec, scalar, scalar).compile()) + 3 * slab
-    # Without offload the log-spectrum (1 slab) also stays during the signature stage.
-    spectrum = 8 * n * n * (n // 2 + 1) / n_dev
+    smooth_step = _make_loggauss_step(mesh, shape, chunk)
+    # The density and the running max (3 slabs) stay on the device meanwhile.
+    smoothing_stage = _footprint(smooth_step.lower(spec, scalar, scalar).compile()) + 4 * slab
+    # Without offload the log-spectrum also stays during the signature stage.
     for offload, extra in ((False, spectrum), (True, 0)):
-        peak = max(smoothing_stage, signature_stage + extra)
+        peak = max(base_stage, smoothing_stage, signature_stage + extra)
         print(
-            f"  offload={offload!s:5}: smoothing {smoothing_stage / slab:.1f}, signatures "
-            f"{(signature_stage + extra) / slab:.1f} slabs -> peak {peak / GiB:.2f} GiB"
+            f"  offload={offload!s:5}: base {base_stage / slab:.1f}, smoothing "
+            f"{smoothing_stage / slab:.1f}, signatures {(signature_stage + extra) / slab:.1f}"
+            f" slabs -> peak {peak / GiB:.2f} GiB"
         )
 
 

@@ -7,8 +7,16 @@ import jax.numpy as jnp
 from jax import lax
 from jax.sharding import PartitionSpec as P
 
-from .fft import local_irfft3, local_ky_index, local_rfft3, wavenumbers
-from .mesh import AXIS, REAL_SPEC, check_shape
+from .fft import (
+    local_forward_x,
+    local_inverse_x,
+    local_irfft3,
+    local_ky_index,
+    local_map_real_space,
+    local_rfft3,
+    wavenumbers,
+)
+from .mesh import AXIS, CHUNK_ELEMENTS, REAL_SPEC, check_shape
 
 NEXUS = "NEXUS"
 NEXUSPLUS = "NEXUSPLUS"
@@ -38,18 +46,31 @@ def local_gaussian_block(spec_shape, shape, R):
     )
 
 
-def local_loggauss_spectrum(log_spec, total, R, shape):
+def local_loggauss_spectrum(log_spec, total, R, shape, chunk_elements=CHUNK_ELEMENTS):
     """
     Spectrum of the NEXUS+ smoothed field at scale ``R``.
 
     ``log_spec`` is the k-space block of ``log10(ρ)``. The field is smoothed
     in log space, brought back with ``10**x``, renormalised so its sum is
     ``total`` (the sum of ρ, as PyCosmoMMF does), and transformed again.
+
+    The filter is applied on the fly, ``10**x`` a few x-planes at a time
+    between the inverse and forward (y, z) transforms, and the
+    renormalisation (linear) in k-space, so neither the smoothed log field
+    nor the real field is ever stored: one spectrum-sized buffer besides
+    the input and the output.
     """
-    smoothed_log = local_irfft3(log_spec * local_gaussian_block(log_spec.shape, shape, R), shape[2])
-    field = jnp.power(jnp.float32(10.0), smoothed_log)
-    field = field * (total / lax.psum(jnp.sum(field), AXIS))
-    return local_rfft3(field)
+    b = local_inverse_x(
+        log_spec,
+        chunk_elements,
+        multiplier=lambda kx_index, ky_index, kz_index: gaussian(
+            kx_index, ky_index, kz_index, shape, R
+        ),
+    )
+    b, field_sum = local_map_real_space(
+        b, shape[2], lambda x: jnp.power(jnp.float32(10.0), x), chunk_elements
+    )
+    return local_forward_x(b, chunk_elements, scale=total / lax.psum(field_sum, AXIS))
 
 
 def smooth(density, R, mesh, algorithm=NEXUSPLUS, eps=1e-16):

@@ -1,0 +1,310 @@
+name, memory.total [MiB]
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+E1029 04:46:15.332294  911307 gpu_cudamallocasync_allocator.cc:366] gpu_async_2 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:15.332449  911307 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          16
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:15.332467  911307 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:15.332470  911307 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:15.332474  911307 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:15.332476  911307 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:15.332477  911307 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:15.332479  911307 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:15.332483  911307 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:15.332486  911307 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:15.332487  911307 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:15.332489  911307 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:15.368856  911310 gpu_cudamallocasync_allocator.cc:366] gpu_async_3 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:15.368889  911310 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          16
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:15.368898  911310 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:15.368900  911310 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:15.368906  911310 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:15.368908  911310 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:15.368909  911310 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:15.368911  911310 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:15.368913  911310 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:15.368915  911310 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:15.368916  911310 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:15.368917  911310 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:15.392677  911301 gpu_cudamallocasync_allocator.cc:366] gpu_async_0 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6212747264/85118156800
+E1029 04:46:15.392740  911301 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          37
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:15.392754  911301 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:15.392757  911301 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:15.392761  911301 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:15.392763  911301 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:15.392765  911301 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:15.392767  911301 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:15.392773  911301 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:15.392774  911301 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:15.392777  911301 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:15.392778  911301 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:15.398086  911304 gpu_cudamallocasync_allocator.cc:366] gpu_async_1 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:15.398126  911304 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          16
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:15.398137  911304 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:15.398140  911304 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:15.398142  911304 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:15.398144  911304 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:15.398145  911304 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:15.398146  911304 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:15.398149  911304 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:15.398151  911304 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:15.398153  911304 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:15.398154  911304 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+W1029 04:46:15.922434  911173 hlo_rematerialization.cc:3402] Can't reduce memory use below 53.84GiB (57809882313 bytes) by rematerialization; only reduced to 72.05GiB (77359742984 bytes), down from 72.05GiB (77359742984 bytes) originally
+E1029 04:46:17.349547  911304 gpu_cudamallocasync_allocator.cc:366] gpu_async_1 cuMemAllocAsync failed to allocate 51589942020 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 32022396928/85118156800
+E1029 04:46:17.349613  911304 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        48.02GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          18
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:17.349623  911304 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:17.349626  911304 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:17.349629  911304 gpu_cudamallocasync_allocator.cc:72] 8589934592, 1
+E1029 04:46:17.349630  911304 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:17.349632  911304 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:17.349635  911304 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 51573161984
+E1029 04:46:17.349637  911304 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 51556384776
+E1029 04:46:17.349638  911304 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:17.349639  911304 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:17.472629  911310 gpu_cudamallocasync_allocator.cc:366] gpu_async_3 cuMemAllocAsync failed to allocate 51589942020 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 32022396928/85118156800
+E1029 04:46:17.472716  911310 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        48.02GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          18
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:17.472735  911310 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:17.472740  911310 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:17.472745  911310 gpu_cudamallocasync_allocator.cc:72] 8589934592, 1
+E1029 04:46:17.472747  911310 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:17.472748  911310 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:17.472753  911310 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 51573161984
+E1029 04:46:17.472755  911310 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 51556384776
+E1029 04:46:17.472757  911310 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:17.472758  911310 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:17.630642  911301 gpu_cudamallocasync_allocator.cc:366] gpu_async_0 cuMemAllocAsync failed to allocate 51589942020 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 32016105472/85118156800
+E1029 04:46:17.630689  911301 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        48.02GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          38
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:17.630703  911301 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:17.630706  911301 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:17.630709  911301 gpu_cudamallocasync_allocator.cc:72] 8589934592, 1
+E1029 04:46:17.630711  911301 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:17.630712  911301 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:17.630716  911301 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 51573161984
+E1029 04:46:17.630718  911301 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 51556384776
+E1029 04:46:17.630719  911301 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:17.630722  911301 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:17.633518  911307 gpu_cudamallocasync_allocator.cc:366] gpu_async_2 cuMemAllocAsync failed to allocate 51589942020 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 32022396928/85118156800
+E1029 04:46:17.633568  911307 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        48.02GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          18
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:17.633577  911307 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:17.633580  911307 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:17.633584  911307 gpu_cudamallocasync_allocator.cc:72] 8589934592, 1
+E1029 04:46:17.633586  911307 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:17.633587  911307 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:17.633590  911307 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 51573161984
+E1029 04:46:17.633591  911307 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 51556384776
+E1029 04:46:17.633593  911307 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:17.633595  911307 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:18.713313  911310 gpu_cudamallocasync_allocator.cc:366] gpu_async_3 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:18.713354  911310 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          22
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:18.713366  911310 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:18.713370  911310 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:18.713372  911310 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:18.713374  911310 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:18.713375  911310 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:18.713377  911310 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:18.713380  911310 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:18.713382  911310 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:18.713384  911310 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:18.713388  911310 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:18.765705  911307 gpu_cudamallocasync_allocator.cc:366] gpu_async_2 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:18.765725  911307 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          22
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:18.765732  911307 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:18.765735  911307 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:18.765738  911307 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:18.765742  911307 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:18.765744  911307 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:18.765746  911307 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:18.765749  911307 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:18.765750  911307 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:18.765752  911307 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:18.765753  911307 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:18.789488  911304 gpu_cudamallocasync_allocator.cc:366] gpu_async_1 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6219038720/85118156800
+E1029 04:46:18.789518  911304 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          22
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:18.789528  911304 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:18.789530  911304 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:18.789533  911304 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:18.789534  911304 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:18.789535  911304 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:18.789537  911304 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:18.789540  911304 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:18.789542  911304 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:18.789543  911304 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:18.789545  911304 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+E1029 04:46:18.794384  911301 gpu_cudamallocasync_allocator.cc:366] gpu_async_0 cuMemAllocAsync failed to allocate 8598323200 bytes: RESOURCE_EXHAUSTED: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+=== Source Location Trace: ===
+external/xla+/xla/stream_executor/cuda/cuda_status.cc:45
+
+ Reported by CUDA: Free memory/Total memory: 6212747264/85118156800
+E1029 04:46:18.794408  911301 gpu_cudamallocasync_allocator.cc:371] Stats: Limit:                              0B
+InUse:                        72.03GiB
+MaxInUse:                     72.03GiB
+NumAllocs:                          43
+MaxAllocSize:                 24.00GiB
+Reserved:                           0B
+PeakReserved:                       0B
+PeakAllocated:                    72.03GiB
+LargestFreeBlock:                   0B
+
+E1029 04:46:18.794417  911301 gpu_cudamallocasync_allocator.cc:69] Histogram of current allocation: (allocation_size_in_bytes, nb_allocation_of_that_sizes), ...;
+E1029 04:46:18.794420  911301 gpu_cudamallocasync_allocator.cc:72] 4, 2
+E1029 04:46:18.794423  911301 gpu_cudamallocasync_allocator.cc:72] 8589934592, 2
+E1029 04:46:18.794425  911301 gpu_cudamallocasync_allocator.cc:72] 8598323200, 2
+E1029 04:46:18.794427  911301 gpu_cudamallocasync_allocator.cc:72] 17196646416, 1
+E1029 04:46:18.794428  911301 gpu_cudamallocasync_allocator.cc:72] 25769803776, 1
+E1029 04:46:18.794431  911301 gpu_cudamallocasync_allocator.cc:105] CU_MEMPOOL_ATTR_RESERVED_MEM_CURRENT: 77376520192
+E1029 04:46:18.794433  911301 gpu_cudamallocasync_allocator.cc:107] CU_MEMPOOL_ATTR_USED_MEM_CURRENT: 77342965784
+E1029 04:46:18.794434  911301 gpu_cudamallocasync_allocator.cc:108] CU_MEMPOOL_ATTR_RESERVED_MEM_HIGH: 83584090112
+E1029 04:46:18.794436  911301 gpu_cudamallocasync_allocator.cc:109] CU_MEMPOOL_ATTR_USED_MEM_HIGH: 77342965784
+Traceback (most recent call last):
+  File "/scratch/gpfs/TEYSSIER/js7501/G4/jaxweb/benchmarks/run_signatures.py", line 49, in <module>
+    main()
+  File "/scratch/gpfs/TEYSSIER/js7501/G4/jaxweb/benchmarks/run_signatures.py", line 36, in main
+    sigmax.block_until_ready()
+jax.errors.JaxRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 48.05GiB with allocator gpu_async_0 on device 0. [executable_name='jit_local'] [tf-allocator-allocation-error='']
+srun: error: della-l09g1: task 0: Exited with exit code 1
+srun: Terminating StepId=16422114.0

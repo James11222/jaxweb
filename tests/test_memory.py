@@ -2,8 +2,13 @@
 
 XLA's buffer assignment for the compiled steps, at 256³ on 4 devices with the
 chunking scaled so the loops run as many chunks as at 2048³. The numbers are
-in field slabs (one float32 x-slab per device); the design budget is ~8.1
-slabs for NEXUS+ and ~7.1 for NEXUS (65 and 57 GiB at 2048³).
+in field slabs (one float32 x-slab per device). Run under ``JAX_PLATFORMS=cuda``
+on a 4-GPU node they check the GPU compiler, whose transposes are what broke
+the budget before (see ``jaxweb.fft._row_major``).
+
+At 2048³ on 4× A100 80 GB the measured peak is 65.3 GiB (~8.2 slabs) for
+both NEXUS and NEXUS+ (with the log-spectrum offloaded), with the caller
+keeping the density on the device.
 """
 
 from __future__ import annotations
@@ -12,8 +17,8 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from jaxweb.mesh import kspace_sharding, sig_sharding
-from jaxweb.signatures import _make_loggauss_step, _make_signature_step
+from jaxweb.mesh import kspace_sharding, real_sharding, sig_sharding
+from jaxweb.signatures import _make_base, _make_loggauss_step, _make_signature_step
 
 N = 256
 CHUNK = N * N  # one x-plane / one k_y column per chunk, 64 chunks per device
@@ -48,6 +53,16 @@ def test_signature_stage_budget(mesh, specs, smooth, budget):
 
 def test_loggauss_stage_budget(mesh, specs):
     shape, _, spec, scalar, slab = specs
-    step = _make_loggauss_step(mesh, shape)
-    # Plus 3 slabs of running max that stay on the device meanwhile.
-    assert footprint(step.lower(spec, scalar, scalar).compile()) / slab + 3 < 7.5
+    step = _make_loggauss_step(mesh, shape, CHUNK)
+    # Log-spectrum in, spectrum out, one spectrum-sized buffer in between;
+    # plus 3 slabs of running max that stay on the device meanwhile.
+    assert footprint(step.lower(spec, scalar, scalar).compile()) / slab + 3 < 6.5
+
+
+@pytest.mark.parametrize("algorithm", ["NEXUS", "NEXUSPLUS"])
+def test_base_stage_budget(mesh, specs, algorithm):
+    shape, _, _, _, slab = specs
+    real = jax.ShapeDtypeStruct(shape, jnp.float32, sharding=real_sharding(mesh))
+    base = _make_base(mesh, shape, algorithm, 1e-16, CHUNK)
+    # Density in, spectrum out, one spectrum-sized buffer in between.
+    assert footprint(base.lower(real).compile()) / slab < 3.5

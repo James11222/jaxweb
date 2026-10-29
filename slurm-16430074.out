@@ -1,0 +1,17 @@
+name, memory.total [MiB]
+NVIDIA A100 80GB PCIe, 81920 MiB
+NVIDIA A100 80GB PCIe, 81920 MiB
+NVIDIA A100 80GB PCIe, 81920 MiB
+NVIDIA A100 80GB PCIe, 81920 MiB
+Clusters: signature threshold 8.445976257324219, volume fraction 0.0006195304449647665, mass fraction 0.15412689745426178
+Filaments: signature threshold 0.44668370485305786, volume fraction 0.0625796988606453, mass fraction 0.41604262590408325
+Walls: signature threshold 0.02818383276462555, volume fraction 0.4417487680912018, mass fraction 0.28768640756607056
+Voids: signature threshold None, volume fraction 0.4950519800186157, mass fraction 0.1421440839767456
+NEXUSPLUS (2048, 2048, 2048) on 4 devices
+  load 5.5 s, signatures 63.1 s, tagging 296.2 s, write 17.8 s, total 382.7 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/dm_density_L1_m9_DMO_0077_NEXUSPLUS_structure_filter.npy
+  wrote ../data/dm_density_L1_m9_DMO_0077_NEXUSPLUS_summary.json

@@ -71,8 +71,10 @@ def test_chunking_does_not_change_the_result(mesh):
     many_chunks = jaxweb.maximum_signature(cube, RS[:3], mesh=mesh, chunk_elements=2**13)
     one_chunk, many_chunks = np.asarray(one_chunk), np.asarray(many_chunks)
     # Not bit-identical: XLA's FFTs and reductions round differently for
-    # different batch sizes, at the float32 ulp level.
-    np.testing.assert_allclose(many_chunks, one_chunk, rtol=1e-5, atol=1e-6 * one_chunk.max())
+    # different batch sizes, at the float32 ulp level. The NEXUS+ smoothing is
+    # chunked too, so the renormalising sum changes order; on this cube the two
+    # differ by 7.5e-6 of the maximum, while each is 2.3-3.0e-5 from PyCosmoMMF.
+    np.testing.assert_allclose(many_chunks, one_chunk, rtol=1e-5, atol=1e-5 * one_chunk.max())
 
 
 @pytest.mark.parametrize(

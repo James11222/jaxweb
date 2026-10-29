@@ -36,3 +36,15 @@ def test_largest_divisor_at_most():
     assert largest_divisor_at_most(512, 8) == 8
     assert largest_divisor_at_most(12, 5) == 4
     assert largest_divisor_at_most(7, 0) == 1
+
+
+def test_chunked_transforms_match_one_chunk(mesh):
+    rng = np.random.default_rng(2)
+    x = rng.standard_normal((32, 32, 32)).astype(np.float32)
+    # 32·32 elements per x-plane and 32·17 per k_y column: 2**11 gives 4 chunks
+    # of x-planes and 8 of k_y columns per device.
+    spec = np.asarray(jaxweb.rfft3(x, mesh, chunk_elements=2**11))
+    want = np.fft.rfftn(x.astype(np.float64))
+    np.testing.assert_allclose(spec, want, atol=2e-4 * np.abs(want).max())
+    back = np.asarray(jaxweb.irfft3(jaxweb.rfft3(x, mesh), mesh, 32, chunk_elements=2**11))
+    np.testing.assert_allclose(back, x, atol=1e-5)

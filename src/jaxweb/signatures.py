@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -72,10 +74,10 @@ def _make_signature_step(mesh, shape, chunk_elements, smooth):
     return jax.jit(fn, donate_argnums=0)
 
 
-def _make_loggauss_step(mesh, shape):
+def _make_loggauss_step(mesh, shape, chunk_elements=CHUNK_ELEMENTS):
     """Jitted ``(log_spec, total, R) -> spec``: the NEXUS+ smoothed field's spectrum."""
     fn = jax.shard_map(
-        lambda base, total, R: local_loggauss_spectrum(base, total, R, shape),
+        lambda base, total, R: local_loggauss_spectrum(base, total, R, shape, chunk_elements),
         mesh=mesh,
         in_specs=(KSPACE_SPEC, P(), P()),
         out_specs=KSPACE_SPEC,
@@ -87,26 +89,47 @@ def _slab_bytes(shape, mesh):
     return 4 * shape[0] * shape[1] * shape[2] // mesh.shape[AXIS]
 
 
+def _memory_limit(device):
+    """Bytes XLA may use on ``device``, or ``None`` if unknown (CPU)."""
+    limit = (device.memory_stats() or {}).get("bytes_limit")
+    if limit or device.platform != "gpu":
+        return limit or None
+    # The cuda_async allocator (the benchmark setting) reports a limit of 0:
+    # use the device memory times XLA's fraction, read through CuPy.
+    try:
+        import cupy
+    except ImportError:
+        return None
+    total = cupy.cuda.Device(device.local_hardware_id).mem_info[1]
+    return total * float(os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.75"))
+
+
 def _should_offload(shape, mesh):
     """
-    Park the NEXUS+ log-spectrum in host memory when ~8.3 field slabs per device
-    (the on-device peak, see ``benchmarks/memory_estimate.py``) would not fit
-    in 90% of the device memory. Never on devices that report no limit (CPU).
+    Park the NEXUS+ log-spectrum in host memory when the on-device peak would
+    not fit in 90% of the device memory. Never on devices with no known limit
+    (CPU).
+
+    The peak is the signature step (~7.2 field slabs per device, see
+    ``benchmarks/memory_estimate.py``) plus the log-spectrum and the density,
+    which callers usually keep for tagging: ~9.2 slabs (73 GiB at 2048³ on
+    4 GPUs, measured).
     """
-    stats = mesh.devices.flat[0].memory_stats() or {}
-    limit = stats.get("bytes_limit")
-    return bool(limit) and 8.3 * _slab_bytes(shape, mesh) > 0.9 * limit
+    limit = _memory_limit(mesh.devices.flat[0])
+    return bool(limit) and 9.2 * _slab_bytes(shape, mesh) > 0.9 * limit
 
 
-def _make_base(mesh, shape, algorithm, eps):
+def _make_base(mesh, shape, algorithm, eps, chunk_elements=CHUNK_ELEMENTS):
     """k-space of ρ (NEXUS) or log10 ρ (NEXUS+), and the total mass Σρ."""
 
     def local(rho):
-        field = rho + jnp.float32(eps)
-        total = lax.psum(jnp.sum(field), AXIS)
+        eps32 = jnp.float32(eps)
+        total = lax.psum(jnp.sum(rho + eps32), AXIS)
         if algorithm == NEXUSPLUS:
-            field = jnp.log10(field)
-        return local_rfft3(field), total
+            pre = lambda x: jnp.log10(x + eps32)
+        else:
+            pre = lambda x: x + eps32
+        return local_rfft3(rho, chunk_elements, pre=pre), total
 
     fn = jax.shard_map(local, mesh=mesh, in_specs=REAL_SPEC, out_specs=(KSPACE_SPEC, P()))
     return jax.jit(fn)
@@ -164,7 +187,7 @@ def maximum_signature(
             )
             raise ValueError(msg)
 
-    base, total = _make_base(mesh, shape, algorithm, eps)(density)
+    base, total = _make_base(mesh, shape, algorithm, eps, chunk_elements)(density)
     del density
 
     sigmax = jax.jit(
@@ -178,7 +201,7 @@ def maximum_signature(
             sigmax = step(sigmax, base, jnp.float32(R))
         return sigmax
 
-    smooth_step = _make_loggauss_step(mesh, shape)
+    smooth_step = _make_loggauss_step(mesh, shape, chunk_elements)
     step = _make_signature_step(mesh, shape, chunk_elements, smooth=False)
     if offload is None:
         offload = _should_offload(shape, mesh)
@@ -191,6 +214,11 @@ def maximum_signature(
         )
         sigmax = step(sigmax, spec, R)
         del spec
+        if offload:
+            # Otherwise the host queues the next scale's copy of the spectrum
+            # while this step still runs, and the copies land on top of the
+            # step's temporaries (3 extra slabs measured at 1024³ on 4 GPUs).
+            sigmax.block_until_ready()
     return sigmax
 
 

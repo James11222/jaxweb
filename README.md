@@ -43,20 +43,20 @@ export XLA_PYTHON_CLIENT_ALLOCATOR=cuda_async
 
 ## How it works
 
-- Real-space fields are split along x into one slab per GPU; k-space fields are split along k_y. The 3D FFT is a local 2D FFT, one `all_to_all`, and a local 1D FFT.
+- Real-space fields are split along x into one slab per GPU; k-space fields are split along k_y. The 3D FFT is a local 2D FFT, one `all_to_all`, and a local 1D FFT, each done a few planes or columns at a time so no full-slab FFT work area or transpose is ever made. The NEXUS+ smoothing (inverse FFT, 10^x, forward FFT) is fused into one such pass.
 - The Hessian H_ij = −k_i k_j R² f̂ is built from three partial inverse transforms over x only (k_x to the power 0, 1, 2). Each takes one chunked all-to-all. The six components are then made a few x-planes at a time, straight into the eigenvalues, signatures and running max, so they never exist at full size.
 - Eigenvalues use the closed-form Smith (1961) solver, the same as PyCosmoMMF.
 - Tagging follows PyCosmoMMF's `calc_structure_bools` step for step. Clumps are labelled per GPU (CuPy; SciPy on CPU devices) in pieces of at most 2³⁰ voxels, and clumps that touch across piece boundaries are joined on the host with a connected-components pass over the touching label pairs. Like PyCosmoMMF, clumps are not joined across the box faces.
 
-Memory per GPU at 2048³ on 4 GPUs, from XLA's buffer assignment (`benchmarks/memory_estimate.py`):
+Measured on one node of 4× A100 80 GB (Della), 2048³, 9 scales, with the caller keeping the density on the GPUs (`benchmarks/run_a100_node.slurm`):
 
-| Algorithm | Peak per GPU |
-| --- | --- |
-| NEXUS | 57 GiB |
-| NEXUS+ | 65 GiB |
-| NEXUS+ with `offload=True` (log-spectrum kept in host memory) | 57 GiB |
+| Algorithm | Peak per GPU | Signatures |
+| --- | --- | --- |
+| NEXUS | 65.3 GiB | 13 s |
+| NEXUS+ with `offload=True` (log-spectrum kept in host memory) | 65.3 GiB | 46 s |
+| NEXUS+ with `offload=False` | 73.3 GiB | 25 s |
 
-`offload=None` (the default) turns host offload on when the estimate does not fit in 90% of device memory.
+`offload=None` (the default) turns host offload on when NEXUS+ would need more than 90% of the memory XLA may use (`XLA_PYTHON_CLIENT_MEM_FRACTION` of the device), which it does at 2048³ on 4× 80 GB. `benchmarks/memory_estimate.py` gives the same numbers from XLA's buffer assignment without a GPU.
 
 Tagging needs about 40 GiB per GPU at 2048³ on 4 GPUs (density, signatures and a few masks), plus CuPy's labelling workspace for one 2³⁰-voxel piece.
 
