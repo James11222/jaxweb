@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 import jaxweb
+from jaxweb.signatures import _chunking
 
 pcm = pytest.importorskip("pycosmommf")
 
@@ -64,9 +65,14 @@ def test_maximum_signature_matches(mesh, cube, algorithm):
 def test_chunking_does_not_change_the_result(mesh):
     cube = lognormal_cube(64, seed=3)
     one_chunk = jaxweb.maximum_signature(cube, RS[:3], mesh=mesh, chunk_elements=2**30)
-    # 64·64·33 elements per k_y column, 64·64 per x-plane: several chunks each.
-    many_chunks = jaxweb.maximum_signature(cube, RS[:3], mesh=mesh, chunk_elements=2**13 * 33)
-    np.testing.assert_array_equal(np.asarray(one_chunk), np.asarray(many_chunks))
+    # 64·33 elements per k_y column and 64·64 per x-plane: 2**13 gives 8 chunks
+    # of each kind per device.
+    assert _chunking(cube.shape, 4, 2**13) == (8, 8)
+    many_chunks = jaxweb.maximum_signature(cube, RS[:3], mesh=mesh, chunk_elements=2**13)
+    one_chunk, many_chunks = np.asarray(one_chunk), np.asarray(many_chunks)
+    # Not bit-identical: XLA's FFTs and reductions round differently for
+    # different batch sizes, at the float32 ulp level.
+    np.testing.assert_allclose(many_chunks, one_chunk, rtol=1e-5, atol=1e-6 * one_chunk.max())
 
 
 @pytest.mark.parametrize(
@@ -79,9 +85,11 @@ def test_synthetic_shapes_match(mesh, make):
     got = jaxweb.to_pycosmommf_layout(
         jaxweb.maximum_signature(rho, RS, algorithm="NEXUS", mesh=mesh)
     )
-    # Highly symmetric shapes have near-degenerate Hessians, where float32
-    # rounding in the trig eigen-solver moves the signature by ~1e-3 relative.
-    np.testing.assert_allclose(got, want, rtol=1e-3, atol=1e-4 * want.max())
+    # Highly symmetric shapes have exactly degenerate Hessians (on a cylinder's
+    # axis, say), where float32 rounding in the trig eigen-solver moves a
+    # near-zero signature by up to ~2e-4 of the maximum, depending on the
+    # platform's FFT and libm. PyCosmoMMF's own CPU and GPU backends differ the same way.
+    np.testing.assert_allclose(got, want, rtol=1e-3, atol=1e-3 * want.max())
     # The dominant structure type agrees voxel by voxel wherever it is clear.
     strong = want.max(axis=-1) > 0.05 * want.max()
     assert np.mean(got.argmax(-1)[strong] == want.argmax(-1)[strong]) > 0.999

@@ -58,6 +58,11 @@ def eigvalsh_3x3_sym(a, b, c, d, e, f):
     return finish(eig_min), finish(eig_mid), finish(eig_max)
 
 
+def _pos_part(x):
+    """x · Heaviside(x)."""
+    return jnp.maximum(x, 0.0)
+
+
 def signatures_from_eigenvalues(e1, e2, e3):
     """
     Cluster, filament and wall signatures from sorted eigenvalues
@@ -72,11 +77,10 @@ def signatures_from_eigenvalues(e1, e2, e3):
     r3 = jnp.abs(e3 / safe_e1)
 
     neg1, neg2, neg3 = e1 < 0.0, e2 < 0.0, e3 < 0.0
-    pos_part = lambda x: jnp.maximum(x, 0.0)
 
     cluster = jnp.where(neg1 & neg2 & neg3, r3 * jnp.abs(e3), 0.0)
-    filament = jnp.where(neg1 & neg2, r2 * pos_part(1.0 - r3) * jnp.abs(e2), 0.0)
-    wall = jnp.where(neg1, pos_part(1.0 - r2) * pos_part(1.0 - r3) * jnp.abs(e1), 0.0)
+    filament = jnp.where(neg1 & neg2, r2 * _pos_part(1.0 - r3) * jnp.abs(e2), 0.0)
+    wall = jnp.where(neg1, _pos_part(1.0 - r2) * _pos_part(1.0 - r3) * jnp.abs(e1), 0.0)
 
     sigs = jnp.stack([cluster, filament, wall])
     return jnp.where(zero_e1, 0.0, sigs).astype(jnp.float32)
