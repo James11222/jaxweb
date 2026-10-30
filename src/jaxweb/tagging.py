@@ -5,8 +5,10 @@ arrays: the same thresholds, the same selection rules and the same uint8
 ``structure_filter`` (1 cluster, 2 filament, 3 wall, 4 void).
 
 1. Clusters: for each cluster-signature threshold, label the clumps above it
-   and take the fraction whose mean δ exceeds ``overdensity_threshold``; keep
-   the threshold whose fraction is closest to 0.5.
+   and take the fraction that are virialized; keep the threshold whose
+   fraction is closest to 0.5. By default a clump is virialized when its
+   largest δ exceeds ``overdensity_threshold``; PyCosmoMMF uses the mean δ
+   (``clump_statistic="mean"``; see ``virialized_clumps``).
 2. Filaments, then walls: the enclosed mass M(𝒮) over a log10 𝒮 grid, and
    the threshold at the peak of |dM²/dlog 𝒮|.
 """
@@ -22,7 +24,7 @@ from jax import lax
 from jax.sharding import PartitionSpec as P
 
 from .fft import largest_divisor_at_most
-from .labels import clump_mean_overdensity
+from .labels import clump_sums
 from .mesh import (
     AXIS,
     CHUNK_ELEMENTS,
@@ -36,6 +38,15 @@ from .mesh import (
 )
 
 CLUSTER, FILAMENT, WALL, VOID = 1, 2, 3, 4
+
+# Per-clump δ statistics a clump's virialization can be judged by, and the
+# ``labels.clump_sums`` each needs. jaxweb uses the max, PyCosmoMMF the mean.
+CLUMP_STATISTICS = {
+    "mean": ("count", "delta"),
+    "mass_weighted": ("mass", "mass_delta"),
+    "median": ("count", "above"),
+    "max": ("above",),
+}
 
 
 # -- Helpers shared with PyCosmoMMF (same rules, same float32 values) --------
@@ -78,13 +89,43 @@ def mass_change_curve(log10S, M):
     return np.power(np.float32(10.0), mid), dM2
 
 
-def warn_unresolved_clusters(overdensity_threshold):
+def warn_unresolved_clusters(overdensity_threshold, clump_statistic="mean"):
     print(
-        "WARNING: no clump has a mean overdensity δ above "
+        f"WARNING: no clump has a {clump_statistic} overdensity δ above "
         f"{overdensity_threshold} at any cluster-signature threshold. The "
         "resolution of the grid is not sufficiently high to resolve virialized "
         "clusters/nodes of the cosmic web, so the cluster filter is empty."
     )
+
+
+def _check_clump_statistic(clump_statistic):
+    if clump_statistic not in CLUMP_STATISTICS:
+        msg = f"clump_statistic must be one of {list(CLUMP_STATISTICS)}, not {clump_statistic!r}"
+        raise ValueError(msg)
+
+
+def virialized_clumps(sums, clump_statistic, overdensity_threshold):
+    """
+    Boolean per clump: whether its δ statistic exceeds ``overdensity_threshold``,
+    from its ``labels.clump_sums`` (``CLUMP_STATISTICS`` lists the sums each
+    statistic needs, with ``"above"`` counted above ``overdensity_threshold``).
+
+    - ``"mean"``: Σδ / N, as PyCosmoMMF.
+    - ``"mass_weighted"``: Σρδ / Σρ, never below the mean.
+    - ``"median"``: the lower median (element ``(N - 1) // 2`` of the sorted δ),
+      which exceeds the threshold exactly when more than half the voxels do.
+      Usually below the mean in a centrally concentrated clump.
+    - ``"max"``: the largest δ, which exceeds it when at least one voxel does.
+    """
+    _check_clump_statistic(clump_statistic)
+    t = np.float32(overdensity_threshold)
+    if clump_statistic == "mean":
+        return sums["delta"] / sums["count"].astype(np.float32) > t
+    if clump_statistic == "mass_weighted":
+        return sums["mass_delta"] / sums["mass"] > t
+    if clump_statistic == "median":
+        return 2 * sums["above"] > sums["count"]
+    return sums["above"] > 0  # max
 
 
 # -- Device computations ------------------------------------------------------
@@ -182,16 +223,16 @@ def _mass_threshold(sigmax, component, rho, valid, Smin, Smax, mesh):
     return S[np.argmax(dM2)], S, dM2
 
 
-def _cluster_bool(rho, sigmax, overdensity_threshold, thresholds, mesh):
+def _cluster_bool(rho, sigmax, overdensity_threshold, thresholds, clump_statistic, mesh):
+    names = CLUMP_STATISTICS[clump_statistic]
     fractions = np.zeros_like(thresholds)
     for i, S_th in enumerate(thresholds):
-        means = clump_mean_overdensity(_cluster_mask(sigmax, S_th), rho, mesh)
-        fractions[i] = virialized_fraction(
-            np.count_nonzero(means > np.float32(overdensity_threshold)), len(means)
-        )
+        sums = clump_sums(_cluster_mask(sigmax, S_th), rho, mesh, names, overdensity_threshold)
+        virialized = virialized_clumps(sums, clump_statistic, overdensity_threshold)
+        fractions[i] = virialized_fraction(np.count_nonzero(virialized), len(virialized))
     S_th = select_cluster_threshold(thresholds, fractions)
     if S_th is None:
-        warn_unresolved_clusters(overdensity_threshold)
+        warn_unresolved_clusters(overdensity_threshold, clump_statistic)
         clusbool = _cluster_mask(sigmax, np.float32(np.inf))
     else:
         clusbool = _cluster_mask(sigmax, S_th)
@@ -206,6 +247,7 @@ def tag_structures(
     Smax=2,
     clusbool=None,
     cluster_thresholds=None,
+    clump_statistic="max",
     mesh=None,
     verbose=False,
 ):
@@ -215,13 +257,17 @@ def tag_structures(
     Args:
         density: δ+1 = ρ/⟨ρ⟩, NumPy or x-sharded JAX ``(nx, ny, nz)``.
         sigmax: signatures from ``maximum_signature``, ``(3, nx, ny, nz)``.
-        overdensity_threshold: mean δ above which a clump counts as virialized
-            (commonly 370, 200 or 500).
+        overdensity_threshold: the δ a clump's ``clump_statistic`` must exceed
+            for it to count as virialized (commonly 370, 200 or 500).
         Smin, Smax: range of the log10 𝒮 grid for the filament and wall
             mass curves.
         clusbool: an optional boolean cluster mask to use instead of step 1.
         cluster_thresholds: the cluster-signature thresholds scanned in
             step 1; default ``cluster_signature_thresholds()``.
+        clump_statistic: the per-clump δ statistic compared with
+            ``overdensity_threshold`` in step 1, one of ``CLUMP_STATISTICS``:
+            ``"max"`` (the default), ``"mean"`` (PyCosmoMMF's),
+            ``"mass_weighted"`` or ``"median"``; see ``virialized_clumps``.
         mesh: the device mesh; default ``jaxweb.make_mesh()``.
         verbose: print PyCosmoMMF's report.
 
@@ -229,9 +275,11 @@ def tag_structures(
         ``(structure_filter, summary)``: an x-sharded uint8 array
         (1 cluster, 2 filament, 3 wall, 4 void) and a dict with the
         thresholds, curves and volume / mass fractions, using the keys of
-        PyCosmoMMF's ``summary_data``, plus ``"seconds"``: the wall-clock
-        time of each stage (clusters, filaments, walls, filter).
+        PyCosmoMMF's ``summary_data``, plus ``"clump_statistic"`` and
+        ``"seconds"``: the wall-clock time of each stage (clusters, filaments,
+        walls, filter).
     """
+    _check_clump_statistic(clump_statistic)
     mesh = make_mesh() if mesh is None else mesh
     check_shape(density.shape, mesh)
     rho = as_sharded(density, real_sharding(mesh), jnp.float32)
@@ -251,7 +299,12 @@ def tag_structures(
         if cluster_thresholds is None:
             cluster_thresholds = cluster_signature_thresholds()
         clusbool, cluster_thresh, S_clus, f_vir_clus = _cluster_bool(
-            rho, sigmax, overdensity_threshold, np.float32(cluster_thresholds), mesh
+            rho,
+            sigmax,
+            overdensity_threshold,
+            np.float32(cluster_thresholds),
+            clump_statistic,
+            mesh,
         )
     else:
         clusbool = as_sharded(clusbool, real_sharding(mesh), jnp.bool_)
@@ -277,6 +330,7 @@ def tag_structures(
     volume = volume.sum(axis=0, dtype=np.int64)
     total_mass = np.float32(mass.sum())
     summary = {
+        "clump_statistic": clump_statistic,
         "S_clus_thresh": cluster_thresh,
         "S_clus": S_clus,
         "f_vir_clus": f_vir_clus,
@@ -296,6 +350,7 @@ def tag_structures(
 
 
 def _report(summary):
+    print(f"Clump statistic: {summary['clump_statistic']}")
     names = ("Clusters", "Filaments", "Walls", "Voids")
     thresholds = (
         summary["S_clus_thresh"],

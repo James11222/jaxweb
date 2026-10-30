@@ -1,0 +1,59 @@
+name, memory.total [MiB]
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+NVIDIA A100-SXM4-80GB, 81920 MiB
+/scratch/gpfs/TEYSSIER/js7501/G4/jaxweb/src/jaxweb/tagging.py:124: RuntimeWarning: invalid value encountered in divide
+  return sums["mass_delta"] / sums["mass"] > t
+Clump statistic: mean
+Clusters: signature threshold 7.958666801452637, volume fraction 0.00024482293520122766, mass fraction 0.14076729118824005
+Filaments: signature threshold 0.2238721251487732, volume fraction 0.10590146481990814, mass fraction 0.5574174523353577
+Walls: signature threshold 0.35481345653533936, volume fraction 0.20968732237815857, mass fraction 0.17328618466854095
+Voids: signature threshold None, volume fraction 0.6841663718223572, mass fraction 0.12852905690670013
+NEXUSPLUS (2048, 2048, 2048) on 4 devices, mean
+  load 33.8 s, signatures 62.0 s, tagging 157.9 s, tagging: clusters 155.3 s, tagging: filaments 1.0 s, tagging: walls 1.0 s, tagging: filter 0.3 s, write 50.2 s, total 303.9 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_structure_filter.npy
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_summary.json
+Clump statistic: mass_weighted
+Clusters: signature threshold 5.683578014373779, volume fraction 0.0003250912996008992, mass fraction 0.15656600892543793
+Filaments: signature threshold 0.2238721251487732, volume fraction 0.10582119971513748, mass fraction 0.5416187047958374
+Walls: signature threshold 0.35481345653533936, volume fraction 0.20968732237815857, mass fraction 0.17328619956970215
+Voids: signature threshold None, volume fraction 0.6841663718223572, mass fraction 0.12852907180786133
+NEXUSPLUS (2048, 2048, 2048) on 4 devices, mass_weighted
+  load 33.8 s, signatures 62.0 s, tagging 213.5 s, tagging: clusters 210.6 s, tagging: filaments 1.0 s, tagging: walls 1.0 s, tagging: filter 0.3 s, write 53.6 s, total 571.0 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_mass_weighted_structure_filter.npy
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_mass_weighted_summary.json
+Clump statistic: median
+Clusters: signature threshold 7.958666801452637, volume fraction 0.00024482293520122766, mass fraction 0.14076729118824005
+Filaments: signature threshold 0.2238721251487732, volume fraction 0.10590146481990814, mass fraction 0.5574174523353577
+Walls: signature threshold 0.35481345653533936, volume fraction 0.20968732237815857, mass fraction 0.17328618466854095
+Voids: signature threshold None, volume fraction 0.6841663718223572, mass fraction 0.12852905690670013
+NEXUSPLUS (2048, 2048, 2048) on 4 devices, median
+  load 33.8 s, signatures 62.0 s, tagging 102.6 s, tagging: clusters 99.8 s, tagging: filaments 1.0 s, tagging: walls 1.0 s, tagging: filter 0.3 s, write 52.4 s, total 726.1 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_median_structure_filter.npy
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_median_summary.json
+Clump statistic: max
+Clusters: signature threshold 5.683578014373779, volume fraction 0.0003250912996008992, mass fraction 0.15656600892543793
+Filaments: signature threshold 0.2238721251487732, volume fraction 0.10582119971513748, mass fraction 0.5416187047958374
+Walls: signature threshold 0.35481345653533936, volume fraction 0.20968732237815857, mass fraction 0.17328619956970215
+Voids: signature threshold None, volume fraction 0.6841663718223572, mass fraction 0.12852907180786133
+NEXUSPLUS (2048, 2048, 2048) on 4 devices, max
+  load 33.8 s, signatures 62.0 s, tagging 62.9 s, tagging: clusters 60.2 s, tagging: filaments 1.0 s, tagging: walls 1.0 s, tagging: filter 0.3 s, write 55.0 s, total 844.2 s
+  cuda:0: peak 65.3 GiB
+  cuda:1: peak 65.3 GiB
+  cuda:2: peak 65.3 GiB
+  cuda:3: peak 65.3 GiB
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_max_structure_filter.npy
+  wrote ../data/clump_statistics/dm_density_L1_m9_DMO_0077_NEXUSPLUS_max_summary.json

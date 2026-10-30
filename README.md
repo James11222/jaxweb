@@ -31,6 +31,8 @@ structure, summary = jaxweb.tag_structures(rho, sigmax, overdensity_threshold=37
 # summary: thresholds, dM²/dlog S curves, volume and mass fractions (PyCosmoMMF's keys)
 ```
 
+A clump counts as virialized when its largest δ exceeds `overdensity_threshold` (`clump_statistic="max"`, the default). PyCosmoMMF uses the clump's mean δ instead, which leaves the nodes too small; `clump_statistic="mean"` reproduces it, and `"mass_weighted"` and `"median"` are also available (`jaxweb.tagging.virialized_clumps`). `scripts/tag_cube.py --clump-statistic max mean mass_weighted median` tags a cube once per statistic from the same signatures.
+
 NEXUS+ takes log10 ρ, so empty voxels need a floor: by default ρ is clipped to at least `jaxweb.density_floor(rho, mesh)`, a tenth of the 1% quantile of the positive voxels (pass `floor=` to override). PyCosmoMMF adds `1e-16` instead, which puts empty voxels 16 decades down and gives spurious walls around every empty region.
 
 The input must come from a periodic box, and `nx` and `ny` must be divisible by the number of GPUs.

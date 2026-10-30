@@ -1,4 +1,4 @@
-"""Connected clumps of a sharded boolean mask, with per-clump δ sums.
+"""Connected clumps of a sharded boolean mask, with per-clump sums.
 
 Each device labels its own x-slab (CuPy on GPUs, SciPy on CPU devices, both
 26-connected), all devices at once, one host thread each. Clumps that touch across a slab boundary are then joined: the
@@ -28,8 +28,14 @@ from .mesh import CHUNK_ELEMENTS, as_sharded, real_sharding
 
 _STRUCTURE = np.ones((3, 3, 3), dtype=bool)  # 26-connectivity
 
-# Largest piece labelled at once (see ``clump_mean_overdensity``).
+# Largest piece labelled at once (see ``clump_sums``).
 LABEL_ELEMENTS = 2**30
+
+# The per-clump sums ``clump_sums`` can make, as functions of ρ and δ = ρ - 1:
+# the voxel count, Σδ, Σρ (the mass), Σρδ, and the number of voxels with δ
+# above a threshold.
+SUMS = ("count", "delta", "mass", "mass_delta", "above")
+_INTEGER_SUMS = ("count", "above")
 
 
 def _label_shard(mask):
@@ -48,24 +54,35 @@ def _label_shard(mask):
     return jax.device_put(labels.astype(np.int32), device), int(n)
 
 
-@functools.partial(jax.jit, static_argnums=2)
-def _segment_sums(labels, rho, num_segments):
+@functools.partial(jax.jit, static_argnums=(2, 3))
+def _segment_sums(labels, rho, num_segments, names, threshold):
     """
-    float32 sum of δ = ρ - 1 and int32 voxel count per label (index 0 is
-    background), a few x-planes at a time so no slab-sized temporary is made.
+    The ``names`` sums per label (index 0 is background): float32 sums,
+    int32 counts, a few x-planes at a time so no slab-sized temporary is made.
     """
     nx, ny, nz = labels.shape
     planes = largest_divisor_at_most(nx, CHUNK_ELEMENTS // (ny * nz))
 
-    def body(c, carry):
-        sums, counts = carry
+    def body(c, sums):
         lab = lax.dynamic_slice_in_dim(labels, c * planes, planes, axis=0).ravel()
-        delta = lax.dynamic_slice_in_dim(rho, c * planes, planes, axis=0).ravel() - 1.0
-        sums = sums + jax.ops.segment_sum(delta, lab, num_segments=num_segments)
-        counts = counts + jax.ops.segment_sum(jnp.ones_like(lab), lab, num_segments=num_segments)
-        return sums, counts
+        r = lax.dynamic_slice_in_dim(rho, c * planes, planes, axis=0).ravel()
+        delta = r - 1.0
+        weights = {
+            "count": lambda: jnp.ones_like(lab),
+            "delta": lambda: delta,
+            "mass": lambda: r,
+            "mass_delta": lambda: r * delta,
+            "above": lambda: (delta > threshold).astype(jnp.int32),
+        }
+        return tuple(
+            s + jax.ops.segment_sum(weights[name](), lab, num_segments=num_segments)
+            for s, name in zip(sums, names, strict=True)
+        )
 
-    init = (jnp.zeros(num_segments, jnp.float32), jnp.zeros(num_segments, jnp.int32))
+    init = tuple(
+        jnp.zeros(num_segments, jnp.int32 if name in _INTEGER_SUMS else jnp.float32)
+        for name in names
+    )
     return lax.fori_loop(0, nx // planes, body, init)
 
 
@@ -87,12 +104,12 @@ def _touching_pairs(last_plane, first_plane):
     return np.unique(np.concatenate(pairs), axis=0)
 
 
-def _label_slab(mask, rho):
+def _label_slab(mask, rho, names, threshold):
     """
     Label one device's slab, in pieces of at most LABEL_ELEMENTS voxels (a
     2048³ slab on one of 4 GPUs has exactly 2^31, where int32 indexing can
-    break). Per piece, along x: ``(sums, counts, first plane, last plane, n)``
-    on the host. Pieces are stitched exactly like slabs.
+    break). Per piece, along x: ``(sums, first plane, last plane, n)`` on the
+    host, ``sums`` one array per name. Pieces are stitched exactly like slabs.
     """
     nx, ny, nz = mask.shape
     planes = largest_divisor_at_most(nx, LABEL_ELEMENTS // (ny * nz))
@@ -101,11 +118,10 @@ def _label_slab(mask, rho):
         piece = mask if planes == nx else mask[start : start + planes]
         labels, n = _label_shard(piece)
         rho_piece = rho if planes == nx else rho[start : start + planes]
-        s, c = _segment_sums(labels, rho_piece, _bucket(n + 1))
+        sums = _segment_sums(labels, rho_piece, _bucket(n + 1), names, threshold)
         pieces.append(
             (
-                np.asarray(s)[1 : n + 1],
-                np.asarray(c)[1 : n + 1],
+                [np.asarray(s)[1 : n + 1] for s in sums],
                 np.asarray(labels[0]),
                 np.asarray(labels[-1]),
                 n,
@@ -115,17 +131,22 @@ def _label_slab(mask, rho):
     return pieces
 
 
-def clump_mean_overdensity(mask, rho, mesh):
+def clump_sums(mask, rho, mesh, names=("count", "delta"), threshold=0.0):
     """
-    Mean δ of every 26-connected clump of ``mask``, across all slabs.
+    Per-clump sums over every 26-connected clump of ``mask``, across all slabs.
 
     Args:
         mask: x-sharded boolean or uint8 array ``(nx, ny, nz)``.
         rho: float32 δ+1 = ρ/⟨ρ⟩, same shape (δ is formed per slab, on the fly).
         mesh: the device mesh; both arrays are laid out as x-slabs on it.
+        names: which sums to make, from ``SUMS``: ``"count"`` (voxels),
+            ``"delta"`` (Σδ), ``"mass"`` (Σρ), ``"mass_delta"`` (Σρδ) and
+            ``"above"`` (voxels with δ > ``threshold``).
+        threshold: the δ threshold of ``"above"``.
 
     Returns:
-        float32 NumPy array, one mean per clump (in no particular order).
+        A dict of NumPy arrays, one value per clump, the clumps in the same
+        (arbitrary) order in every array: float32 sums, int64 counts.
     """
     if jax.process_count() > 1:
         msg = "clump labelling across several processes is not implemented yet"
@@ -138,17 +159,25 @@ def clump_mean_overdensity(mask, rho, mesh):
     shards = sorted(mask.addressable_shards, key=lambda s: s.index[0].start or 0)
     # One thread per device, so the devices label at the same time: each
     # thread mostly waits on its device, with the GIL released.
+    names = tuple(names)
+    threshold = jnp.float32(threshold)
     with ThreadPoolExecutor(max_workers=len(shards)) as pool:
         slabs = list(
-            pool.map(lambda s: _label_slab(s.data, rho_shards[s.index[0].start or 0]), shards)
+            pool.map(
+                lambda s: _label_slab(s.data, rho_shards[s.index[0].start or 0], names, threshold),
+                shards,
+            )
         )
     pieces = [piece for slab in slabs for piece in slab]
-    sums, counts, first, last, n_local = map(list, zip(*pieces, strict=True))
+    sums, first, last, n_local = map(list, zip(*pieces, strict=True))
+
+    def dtype(name):
+        return np.int64 if name in _INTEGER_SUMS else np.float32
 
     offsets = np.concatenate([[0], np.cumsum(n_local)])
     n_total = int(offsets[-1])
     if n_total == 0:
-        return np.zeros(0, dtype=np.float32)
+        return {name: np.zeros(0, dtype=dtype(name)) for name in names}
 
     # Label l of slab d is node offsets[d] + l - 1.
     edges = [np.zeros((0, 2), dtype=np.int64)]
@@ -163,8 +192,8 @@ def clump_mean_overdensity(mask, rho, mesh):
     )
     n_clumps, clump_of = scipy.sparse.csgraph.connected_components(graph, directed=False)
 
-    clump_sums = np.zeros(n_clumps, dtype=np.float32)
-    np.add.at(clump_sums, clump_of, np.concatenate(sums).astype(np.float32))
-    counts_all = np.zeros(n_clumps, dtype=np.int64)
-    np.add.at(counts_all, clump_of, np.concatenate(counts).astype(np.int64))
-    return clump_sums / counts_all.astype(np.float32)
+    out = {}
+    for i, name in enumerate(names):
+        out[name] = np.zeros(n_clumps, dtype=dtype(name))
+        np.add.at(out[name], clump_of, np.concatenate([s[i] for s in sums]).astype(dtype(name)))
+    return out
